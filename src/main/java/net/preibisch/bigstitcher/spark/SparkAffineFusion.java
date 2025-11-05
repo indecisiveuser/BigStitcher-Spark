@@ -537,7 +537,7 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 								OverlappingViews.findOverlappingViews( dataLocal, viewIds, registrations, fusedBlock );
 
 						if ( overlappingViews.size() == 0 )
-							return gridBlock;
+							return gridBlock.clone();
 
 						// load intensity correction coefficients for all overlapping views
 
@@ -584,7 +584,7 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 							//
 							final OverlappingBlocks overlappingBlocks = OverlappingBlocks.find( dataLocal, registrations, overlappingViews, fusedBlock );
 							if ( overlappingBlocks.overlappingViews().isEmpty() )
-								return gridBlock;
+								return gridBlock.clone();
 
 							if ( prefetch )
 							{
@@ -673,7 +673,7 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 							driverVolumeWriterLocal.close();
 
 						return gridBlock.clone();
-					} );
+					});
 
 					rddResult.cache();
 					rddResult.count();
