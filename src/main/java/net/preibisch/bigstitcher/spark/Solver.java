@@ -522,8 +522,8 @@ public class Solver extends AbstractRegistration
 						{
 							if ( p.getCorrespodingLabel().equals( labelB ) && p.getCorrespondingViewId().equals( vB ) )
 							{
-								InterestPoint ipA = ipListA.get( p.getDetectionId() );
-								InterestPoint ipB = ipListB.get( p.getCorrespondingDetectionId() );
+								InterestPoint ipA = ipListA.get( p.getDetectionId() ); // BUG!!!
+								InterestPoint ipB = ipListB.get( p.getCorrespondingDetectionId() ); // BUG!!!
 		
 								// we need to copy the array because it might not be bijective
 								// (some points in one list might correspond with the same point in the other list)
