@@ -363,18 +363,18 @@ public class CreateFusionContainer extends AbstractBasic implements Callable<Voi
 					(level) -> MipmapTransforms.getMipmapTransformDefault( mrInfo[level].absoluteDownsamplingDouble() );
 
 			// extract the resolution of the s0 export
-			// TODO: this is inaccurate, we should actually estimate it from the final transformn that is applied
+			// TODO: use TransformationTools.computeAverageCalibration()
 			// TODO: this is a hack (returns 1,1,1) so the export downsampling pyramid is working
 			final VoxelDimensions vx = new FinalVoxelDimensions( "micrometer", new double[] { 1, 1, 1 } );// dataGlobal.getSequenceDescription().getViewSetupsOrdered().iterator().next().getVoxelSize();
-			final double[] resolutionS0 = OMEZarrAttibutes.getResolutionS0( vx, anisotropyFactor, Double.NaN );
+			//final double[] resolutionS0 = OMEZarrAttibutes.getResolutionS0( vx, anisotropyFactor, Double.NaN );
 
-			System.out.println( "Resolution of level 0: " + Util.printCoordinates( resolutionS0 ) + " " + "micrometer" ); //vx.unit() might not be OME-ZARR compatiblevx.unit() );
+			System.out.println( "Resolution of level 0: " + Util.printCoordinates( vx.dimensionsAsDoubleArray() ) + " " + "micrometer" ); //vx.unit() might not be OME-ZARR compatiblevx.unit() );
 
 			// create metadata
 			final OmeNgffMultiScaleMetadata[] meta = OMEZarrAttibutes.createOMEZarrMetadata(
 					5, // int n
 					"/", // String name, I also saw "/"
-					resolutionS0, // double[] resolutionS0,
+					vx.dimensionsAsDoubleArray(), // double[] resolutionS0,
 					"micrometer", //vx.unit() might not be OME-ZARR compatible // String unitXYZ, // e.g micrometer
 					mrInfos[ 0 ].length, // int numResolutionLevels,
 					levelToName,
@@ -410,14 +410,14 @@ public class CreateFusionContainer extends AbstractBasic implements Callable<Voi
 				tps.add( new TimePoint( t ) );
 
 			// extract the resolution of the s0 export
-			// TODO: this is inaccurate, we should actually estimate it from the final transformn that is applied
+			// TODO: use TransformationTools.computeAverageCalibration()
 			// TODO: this is a hack (returns 1,1,1) so the export downsampling pyramid is working
 			final VoxelDimensions vx = new FinalVoxelDimensions( "micrometer", new double[] { 1, 1, 1 } );// dataGlobal.getSequenceDescription().getViewSetupsOrdered().iterator().next().getVoxelSize();
-			final double[] resolutionS0 = OMEZarrAttibutes.getResolutionS0( vx, anisotropyFactor, Double.NaN );
+			//final double[] resolutionS0 = OMEZarrAttibutes.getResolutionS0( vx, anisotropyFactor, Double.NaN );
 
-			System.out.println( "Resolution of level 0: " + Util.printCoordinates( resolutionS0 ) + " " + "m" ); //vx.unit() might not be OME-ZARR compatiblevx.unit() );
+			System.out.println( "Resolution of level 0: " + Util.printCoordinates( vx.dimensionsAsDoubleArray() ) + " " + "m" ); //vx.unit() might not be OME-ZARR compatiblevx.unit() );
 
-			final VoxelDimensions vxNew = new FinalVoxelDimensions( "micrometer", resolutionS0 );
+			final VoxelDimensions vxNew = new FinalVoxelDimensions( "micrometer", vx.dimensionsAsDoubleArray() );
 
 			for ( int c = 0; c < numChannels; ++c )
 			{
