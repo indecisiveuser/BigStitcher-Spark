@@ -94,6 +94,7 @@ public class Solver extends AbstractRegistration
 	private static final long serialVersionUID = 5220898723968914742L;
 
 	public enum SolverSource { IP, STITCHING };
+	public enum PreAlign { PREALIGN, NO_PREALIGN };
 
 	public ArrayList< ViewId > fixedViewIds;
 
@@ -127,6 +128,9 @@ public class Solver extends AbstractRegistration
 
 	@Option(names = { "--method" }, description = "global optimization method; ONE_ROUND_SIMPLE, ONE_ROUND_ITERATIVE, TWO_ROUND_SIMPLE or TWO_ROUND_ITERATIVE. Two round handles unconnected tiles, iterative handles wrong links (default: ONE_ROUND_SIMPLE)")
 	protected GlobalOptType globalOptType = GlobalOptType.ONE_ROUND_SIMPLE;
+
+	@Option(names = { "-pa", "--preAlign" }, required = false, description = "whether to pre-align before solving (PREALIGN) or to initialize with the current transformations (NO_PREALIGN), (default: PREALIGN)")
+	protected PreAlign preAlign = PreAlign.PREALIGN;
 
 	@Option(names = { "--relativeThreshold" }, description = "relative error threshold for iterative solvers, how many times worse than the average error a link needs to be (default: 3.5)")
 	protected double relativeThreshold = 3.5;
@@ -236,6 +240,20 @@ public class Solver extends AbstractRegistration
 		System.out.println("groupTiles: " + groupTiles);
 		System.out.println("splitTimepoints: " + splitTimepoints);
 
+		System.out.println("Other parameters: ");
+		System.out.println("method: " + globalOptType );
+		System.out.println("preAlign: " + preAlign );
+		System.out.println("sourcePoints: " + sourcePoints );
+		System.out.println("relativeThreshold: " + relativeThreshold );
+		System.out.println("absoluteThreshold: " + absoluteThreshold );
+		System.out.println("maxError: " + maxError );
+		System.out.println("maxIterations: " + maxIterations );
+		System.out.println("maxPlateauwidth: " + maxPlateauwidth );
+		System.out.println("disableFixedViews: " + disableFixedViews );
+		System.out.println("fixedViews: " + ( fixedViews == null ? "null" : Arrays.toString( fixedViews ) ) );
+		System.out.println("labels: " + Arrays.toString( labels.toArray() ));
+		System.out.println("labelweights: " + Arrays.toString( labelweights.toArray() ));
+
 		// assemble fixed views
 		final HashSet< ViewId > fixedViewIds;
 		
@@ -289,7 +307,7 @@ public class Solver extends AbstractRegistration
 			return null;
 		}
 
-		final GlobalOptimizationParameters globalOptParameters = new GlobalOptimizationParameters(relativeThreshold, absoluteThreshold, globalOptType, false );
+		final GlobalOptimizationParameters globalOptParameters = new GlobalOptimizationParameters(relativeThreshold, absoluteThreshold, globalOptType, preAlign == PreAlign.PREALIGN, false );
 		final Collection< Pair< Group< ViewId >, Group< ViewId > > > removedInconsistentPairs = new ArrayList<>();
 		final HashMap<ViewId, Tile > models;
 		final Model<?> model = createModelInstance(transformationModel, regularizationModel, regularizationLambda);
@@ -300,6 +318,7 @@ public class Solver extends AbstractRegistration
 
 			models = (HashMap)GlobalOpt.computeTiles(
 							(Model)(Object)model,
+							globalOptParameters.preAlign,
 							pmc,
 							cs,
 							fixedViewIds,
@@ -309,6 +328,7 @@ public class Solver extends AbstractRegistration
 		{
 			models = (HashMap)GlobalOptIterative.computeTiles(
 							(Model)(Object)model,
+							globalOptParameters.preAlign,
 							pmc,
 							new SimpleIterativeConvergenceStrategy( Double.MAX_VALUE, maxIterations, maxPlateauwidth, globalOptParameters.relativeThreshold, globalOptParameters.absoluteThreshold ),
 							new MaxErrorLinkRemoval(),
@@ -323,6 +343,7 @@ public class Solver extends AbstractRegistration
 
 			models = (HashMap)GlobalOptTwoRound.computeTiles(
 					(Model & Affine3D)(Object)model,
+					globalOptParameters.preAlign,
 					pmc,
 					new SimpleIterativeConvergenceStrategy( Double.MAX_VALUE, maxIterations, maxPlateauwidth, globalOptParameters.relativeThreshold, globalOptParameters.absoluteThreshold ), // if it's simple, both will be Double.MAX
 					new MaxErrorLinkRemoval(),
@@ -512,31 +533,31 @@ public class Solver extends AbstractRegistration
 						pairResult.setLabelA( labelA );
 						pairResult.setLabelB( labelB );
 		
-						final List<CorrespondingInterestPoints> cpA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getCorrespondingInterestPointsCopy();
+						final Collection<CorrespondingInterestPoints> cpA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getCorrespondingInterestPointsCopy();
 						//List<CorrespondingInterestPoints> cpB = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vB ).getInterestPointList( label ).getCorrespondingInterestPointsCopy();
 		
-						final List<InterestPoint> ipListA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getInterestPointsCopy();
-						final List<InterestPoint> ipListB = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vB ).getInterestPointList( labelB ).getInterestPointsCopy();
+						final Map< Integer, InterestPoint> ipListA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getInterestPointsCopy();
+						final Map< Integer, InterestPoint> ipListB = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vB ).getInterestPointList( labelB ).getInterestPointsCopy();
 		
 						for ( final CorrespondingInterestPoints p : cpA )
 						{
 							if ( p.getCorrespodingLabel().equals( labelB ) && p.getCorrespondingViewId().equals( vB ) )
 							{
-								InterestPoint ipA = ipListA.get( p.getDetectionId() ); // BUG!!!
-								InterestPoint ipB = ipListB.get( p.getCorrespondingDetectionId() ); // BUG!!!
+								InterestPoint ipA = ipListA.get( p.getDetectionId() ); // now that it is a hashmap and not a list, it is no bug anymore
+								InterestPoint ipB = ipListB.get( p.getCorrespondingDetectionId() ); // now that it is a hashmap and not a list, it is no bug anymore
 		
 								// we need to copy the array because it might not be bijective
 								// (some points in one list might correspond with the same point in the other list)
 								// which leads to the SpimData model being applied twice
 								ipA = new InterestPoint( ipA.getId(), ipA.getL().clone() );
 								ipB = new InterestPoint( ipB.getId(), ipB.getL().clone() );
-		
+
 								// transform the points
 								mA.apply( ipA.getL(), ipA.getL() );
 								mA.apply( ipA.getW(), ipA.getW() );
 								mB.apply( ipB.getL(), ipB.getL() );
 								mB.apply( ipB.getW(), ipB.getW() );
-		
+
 								inliers.add( new PointMatchGeneric<>( ipA, ipB ) );
 							}
 						}
@@ -561,88 +582,6 @@ public class Solver extends AbstractRegistration
 		}
 
 		pool.shutdown();
-/*
-		for ( int i = 0; i < viewIdsGlobal.size() - 1; ++i )
-A:			for ( int j = i+1; j < viewIdsGlobal.size(); ++j )
-			{
-				// order doesn't matter, saved symmetrically
-				final ViewId vA = viewIdsGlobal.get( i );
-				final ViewId vB = viewIdsGlobal.get( j );
-
-				// both are fixed, no need to connect them
-				if ( fixedViewIds.contains( vA ) && fixedViewIds.contains( vB ) )
-				{
-					System.out.println( "Not assigning " + Group.pvid( vA ) + " <> " + Group.pvid( vB ) + " because they are both fixed." );
-					continue;
-				}
-
-				// both are part of the same group, no need to connect them
-				for ( final Group< ViewId > group : groups )
-					if ( group.contains( vA ) && group.contains( vB ) )
-					{
-						System.out.println( "Not assigning " + Group.pvid( vA ) + " <> " + Group.pvid( vB ) + " because they are part of the same group." );
-						continue A;
-					}
-
-				final ViewRegistration vRegA = dataGlobal.getViewRegistrations().getViewRegistration( vA );
-				final ViewRegistration vRegB = dataGlobal.getViewRegistrations().getViewRegistration( vB );
-
-				vRegA.updateModel(); vRegB.updateModel();
-				final AffineTransform3D mA = vRegA.getModel();
-				final AffineTransform3D mB = vRegB.getModel();
-
-				// iterate over all pairs of labels
-				for ( final String labelA : labelMap.get( vA ).keySet() )
-					for ( final String labelB : labelMap.get( vB ).keySet() )
-					{
-						final PairwiseResult< ? > pairResult = new PairwiseResult<>( false );
-						final ArrayList inliers = new ArrayList<>();
-		
-						// set labels (required by InterestPointMatchCreator to assign weights)
-						pairResult.setLabelA( labelA );
-						pairResult.setLabelB( labelB );
-		
-						final List<CorrespondingInterestPoints> cpA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getCorrespondingInterestPointsCopy();
-						//List<CorrespondingInterestPoints> cpB = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vB ).getInterestPointList( label ).getCorrespondingInterestPointsCopy();
-		
-						final List<InterestPoint> ipListA = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vA ).getInterestPointList( labelA ).getInterestPointsCopy();
-						final List<InterestPoint> ipListB = dataGlobal.getViewInterestPoints().getViewInterestPointLists( vB ).getInterestPointList( labelB ).getInterestPointsCopy();
-		
-						for ( final CorrespondingInterestPoints p : cpA )
-						{
-							if ( p.getCorrespodingLabel().equals( labelB ) && p.getCorrespondingViewId().equals( vB ) )
-							{
-								InterestPoint ipA = ipListA.get( p.getDetectionId() );
-								InterestPoint ipB = ipListB.get( p.getCorrespondingDetectionId() );
-		
-								// we need to copy the array because it might not be bijective
-								// (some points in one list might correspond with the same point in the other list)
-								// which leads to the SpimData model being applied twice
-								ipA = new InterestPoint( ipA.getId(), ipA.getL().clone() );
-								ipB = new InterestPoint( ipB.getId(), ipB.getL().clone() );
-		
-								// transform the points
-								mA.apply( ipA.getL(), ipA.getL() );
-								mA.apply( ipA.getW(), ipA.getW() );
-								mB.apply( ipB.getL(), ipB.getL() );
-								mB.apply( ipB.getW(), ipB.getW() );
-		
-								inliers.add( new PointMatchGeneric<>( ipA, ipB ) );
-							}
-						}
-		
-						// set inliers
-						if ( inliers.size() > 0 )
-						{
-							System.out.println( Group.pvid( vA ) + " <-> " + Group.pvid( vB ) + ": " + inliers.size() + " correspondences added." );
-							pairResult.setInliers( inliers, 0.0 );
-							pairs.add( new ValuePair<>( new ValuePair<>( vA, vB ), pairResult)) ;
-							connectedViews.add( vA );
-							connectedViews.add( vB );
-						}
-					}
-			}
-*/
 
 		final int missing = viewIdsGlobal.size() - connectedViews.size();
 
