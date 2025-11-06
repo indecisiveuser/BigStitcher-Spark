@@ -540,26 +540,23 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 							return gridBlock.clone();
 
 						// load intensity correction coefficients for all overlapping views
-
-
 						final Map< ViewId, Coefficients > coefficients;
-
 
 						if ( intensityN5PathURI != null )
 						{
 							coefficients = new HashMap<>();
 							try ( N5Reader intensityN5Reader = URITools.instantiateN5Reader( intensityN5StorageType, intensityN5PathURI ) )
 							{
-								overlappingViews.forEach( v -> {
-									coefficients.put( v, IntensityCorrection.readCoefficients( intensityN5Reader, intensityN5Group, intensityN5Dataset, v ) );
-								} );
+								overlappingViews.forEach( v ->
+									coefficients.put( v, IntensityCorrection.readCoefficients( intensityN5Reader, intensityN5Group, intensityN5Dataset, v ) ) );
 							}
-						} else {
+						} else
+						{
 							coefficients = null;
 						}
 
 						//final RandomAccessibleInterval img;
-						final BlockSupplier< ? > blockSupplier;
+						final BlockSupplier blockSupplier;
 						final FinalInterval interval = new FinalInterval( bbMin, bbMax );
 
 						if ( masks )
@@ -615,7 +612,7 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 									blockSize );
 						}
 
-						final long[] /*blockOffset, blockSizeExport, */gridOffset;
+						final long[] gridOffset;
 
 						final long[] blockMin = gridBlock[0].clone();
 						final long[] blockMax = new long[ blockMin.length ];
@@ -650,24 +647,11 @@ public class SparkAffineFusion extends AbstractInfrastructure implements Callabl
 							image = img;
 						}
 
-						/*
-						final Interval block =
-								Intervals.translate(
-										new FinalInterval( blockSizeExport ),
-										blockOffset );
-
-						final RandomAccessibleInterval source =
-								Views.interval( image, block );
-
-						final RandomAccessibleInterval sourceGridBlock =
-								Views.offsetInterval(source, blockOffset, blockSizeExport);
-
-						*/
 						final N5Writer driverVolumeWriterLocal = N5Util.createN5Writer( outPathURI, storageType );
 
 						// TODO: is this multithreaded??
 						// TODO: should we catch the N5 exception and throw a general one?
-						N5Utils.saveBlock(/*sourceGridBlock*/ image, driverVolumeWriterLocal, mrInfo[ 0 ].dataset, gridOffset );
+						N5Utils.saveBlock( image, driverVolumeWriterLocal, mrInfo[ 0 ].dataset, gridOffset );
 
 						if ( N5Util.sharedHDF5Writer == null )
 							driverVolumeWriterLocal.close();
