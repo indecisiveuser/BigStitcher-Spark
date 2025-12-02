@@ -15,6 +15,7 @@ import net.preibisch.bigstitcher.spark.abstractcmdline.AbstractBasic;
 import net.preibisch.bigstitcher.spark.util.Import;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.fiji.plugin.Split_Views;
+import net.preibisch.mvrecon.fiji.plugin.Split_Views.InterestPointAdding;
 import net.preibisch.mvrecon.fiji.spimdata.SpimData2;
 import net.preibisch.mvrecon.fiji.spimdata.XmlIoSpimData2;
 import net.preibisch.mvrecon.fiji.spimdata.explorer.SelectedViewDescriptionListener;
@@ -41,7 +42,7 @@ public class SplitDatasets extends AbstractBasic
 	private boolean disableOptimization = false;
 
 	@Option(names = { "-fip", "--fakeInterestPoints" }, description = "add fake interest points to overlapping regions of split images/views")
-	private boolean fakeInterestPoints = false;
+	private InterestPointAdding fakeInterestPoints = InterestPointAdding.CORR;
 
 	@Option(names = { "--fipDensity" }, description = "density of fake interest points; number of points per 100x100x100 px volume (default: 100.0)")
 	private double fipDensity = 100.0;
